@@ -15,7 +15,7 @@ export default function SetupWizard() {
 
   const REDIRECT_URI =
     typeof window !== "undefined"
-      ? `${window.location.origin}/api/auth/callback`
+      ? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://zoho-email-extractor.deltaacademy.ae"}/api/auth/callback`
       : `${process.env.NEXT_PUBLIC_APP_URL ?? "https://zoho-email-extractor.deltaacademy.ae"}/api/auth/callback`;
 
   async function handleSave() {
