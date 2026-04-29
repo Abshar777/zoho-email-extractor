@@ -1,117 +1,54 @@
-"""
-Run this ONCE to get your Refresh Token.
-It starts a local server, opens your browser automatically,
-catches the redirect, and exchanges the code instantly.
+# oauth_server.py — run this on your VPS to catch the Zoho callback
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+import requests, re, os, uvicorn
 
-Run: python3 setup.py
-"""
-import urllib.parse
-import requests
-import webbrowser
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+app = FastAPI()
+
 import config
 
-refresh_token_result = {}
+@app.get("/api/v1/zoho/oauth/callback", response_class=HTMLResponse)
+async def zoho_callback(request: Request):
+    code = request.query_params.get("code")
+    if not code:
+        return HTMLResponse("<h2 style='color:red'>❌ No code in callback</h2>", status_code=400)
 
-class CallbackHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        parsed = urllib.parse.urlparse(self.path)
-        params = urllib.parse.parse_qs(parsed.query)
-
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html")
-        self.end_headers()
-
-        code = params.get("code", [None])[0]
-        if not code:
-            self.wfile.write(b"<h2>Error: no code found in redirect.</h2>")
-            return
-
-        # Exchange code for tokens immediately
-        resp = requests.post(f"{config.ZOHO_ACCOUNTS_URL}/oauth/v2/token", data={
-            "code": code,
-            "client_id": config.CLIENT_ID,
-            "client_secret": config.CLIENT_SECRET,
-            "redirect_uri": config.REDIRECT_URI,
-            "grant_type": "authorization_code",
-        })
-        data = resp.json()
-
-        if "access_token" in data:
-            refresh_token_result["access_token"] = data["access_token"]
-        if "refresh_token" in data:
-            refresh_token_result["token"] = data["refresh_token"]
-            html = f"""
-            <html><body style="font-family:sans-serif;padding:40px">
-            <h2 style="color:green">✅ Success! Refresh Token obtained.</h2>
-            <p>Your refresh token:</p>
-            <code style="background:#f0f0f0;padding:10px;display:block;word-break:break-all">
-            {data['refresh_token']}
-            </code>
-            <p>You can close this tab. The token has been saved to config.py automatically.</p>
-            </body></html>
-            """.encode()
-        else:
-            html = f"""
-            <html><body style="font-family:sans-serif;padding:40px">
-            <h2 style="color:red">❌ Error exchanging code</h2>
-            <pre>{data}</pre>
-            </body></html>
-            """.encode()
-
-        self.wfile.write(html)
-        # Stop server after handling
-        threading.Thread(target=self.server.shutdown).start()
-
-    def log_message(self, format, *args):
-        pass  # suppress server logs
-
-def main():
-    print("\n=== Zoho Mail Extractor — One-Time Setup ===\n")
-
-    auth_params = {
-        "scope": "ZohoMail.messages.READ,ZohoMail.accounts.READ",
+    # Exchange code for tokens
+    resp = requests.post(f"{config.ZOHO_ACCOUNTS_URL}/oauth/v2/token", data={
+        "code": code,
         "client_id": config.CLIENT_ID,
-        "response_type": "code",
-        "access_type": "offline",
+        "client_secret": config.CLIENT_SECRET,
         "redirect_uri": config.REDIRECT_URI,
-    }
-    auth_url = f"{config.ZOHO_ACCOUNTS_URL}/oauth/v2/auth?" + urllib.parse.urlencode(auth_params)
+        "grant_type": "authorization_code",
+    })
+    data = resp.json()
 
-    port = int(config.REDIRECT_URI.split(":")[2].split("/")[0])
-    print(f"Starting local server on port {port}...")
-    server = HTTPServer(("localhost", port), CallbackHandler)
+    if "refresh_token" not in data:
+        return HTMLResponse(f"<h2 style='color:red'>❌ Error</h2><pre>{data}</pre>", status_code=400)
 
-    print("Opening browser for Zoho authorization...")
-    print(f"(If browser doesn't open, visit: {auth_url})\n")
-    webbrowser.open(auth_url)
+    refresh_token = data["refresh_token"]
+    access_token = data.get("access_token", "")
 
-    print("Waiting for you to approve access in the browser...")
-    server.serve_forever()
+    # Save tokens to config.py
+    config_path = os.path.join(os.path.dirname(__file__), "config.py")
+    with open(config_path, "r") as f:
+        content = f.read()
 
-    if refresh_token_result:
-        import re
-        with open("config.py", "r") as f:
-            content = f.read()
+    content = re.sub(r'REFRESH_TOKEN = ".*?"', f'REFRESH_TOKEN = "{refresh_token}"', content)
+    if access_token:
+        content = re.sub(r'ACCESS_TOKEN = ".*?"', f'ACCESS_TOKEN = "{access_token}"', content)
 
-        if "token" in refresh_token_result:
-            token = refresh_token_result["token"]
-            content = re.sub(r'REFRESH_TOKEN = ".*?"', f'REFRESH_TOKEN = "{token}"', content)
-            print(f"\n✅ Refresh Token: {token}")
+    with open(config_path, "w") as f:
+        f.write(content)
 
-        if "access_token" in refresh_token_result:
-            at = refresh_token_result["access_token"]
-            content = re.sub(r'ACCESS_TOKEN = ".*?"', f'ACCESS_TOKEN = "{at}"', content)
-            print(f"✅ Access Token: {at[:30]}... (saved)")
-
-        with open("config.py", "w") as f:
-            f.write(content)
-
-        print("\n✅ Tokens saved to config.py automatically!")
-        print("Now run: python3 extractor.py")
-    else:
-        print("\n❌ Failed to get tokens. Try again.")
+    return HTMLResponse(f"""
+    <html><body style="font-family:sans-serif;padding:40px">
+    <h2 style="color:green">✅ Tokens saved to config.py!</h2>
+    <p><b>Refresh Token:</b></p>
+    <code style="background:#f0f0f0;padding:10px;display:block;word-break:break-all">{refresh_token}</code>
+    <p>You can close this tab and run: <code>python3 extractor.py</code></p>
+    </body></html>
+    """)
 
 if __name__ == "__main__":
-    main()
+    uvicorn.run("oauth_server:app", host="0.0.0.0", port=5001, reload=False)
