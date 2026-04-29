@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Client ID and Secret are required" }, { status: 400 });
   }
 
-  const redirectUri = `${req.nextUrl.origin}/api/auth/callback`;
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://zoho-email-extractor.deltaacademy.ae"}/api/auth/callback`;
   const jar = await cookies();
   const opts = { httpOnly: true, path: "/", maxAge: 60 * 60 * 24 * 30 } as const;
 
