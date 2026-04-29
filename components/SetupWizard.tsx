@@ -17,7 +17,7 @@ export default function SetupWizard() {
     typeof window !== "undefined"
       ? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://zoho-email-extractor.deltaacademy.ae"}/api/auth/callback`
       : `${process.env.NEXT_PUBLIC_APP_URL ?? "https://zoho-email-extractor.deltaacademy.ae"}/api/auth/callback`;
-
+console.log(REDIRECT_URI)
   async function handleSave() {
     if (!clientId.trim() || !clientSecret.trim()) {
       setError("Both fields are required.");
@@ -296,7 +296,7 @@ function FieldRow({ label, value, copyable }: { label: string; value: string; co
     <div className="flex items-start gap-2">
       <span className="text-gray-500 w-36 flex-shrink-0">{label}:</span>
       <span className="font-mono text-gray-800 text-xs break-all flex-1">{value}</span>
-      {copyable && (
+      {true && (
         <button
           onClick={copy}
           className="flex-shrink-0 text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-0.5 border border-blue-200 rounded"
