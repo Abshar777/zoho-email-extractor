@@ -35,14 +35,16 @@ def fetch_emails(token, account_id):
     emails = []
     start = 1
     batch = 200
+    limit_total = config.EMAIL_LIMIT
 
-    print(f"Fetching up to {config.EMAIL_LIMIT} emails...")
+    label = f"up to {limit_total}" if limit_total else "ALL"
+    print(f"Fetching {label} emails...")
 
-    while len(emails) < config.EMAIL_LIMIT:
-        limit = min(batch, config.EMAIL_LIMIT - len(emails))
+    while True:
+        fetch_count = batch if not limit_total else min(batch, limit_total - len(emails))
         params = {
             "start": start,
-            "limit": limit,
+            "limit": fetch_count,
             "sortorder": "false",  # newest first
         }
         url = f"{config.ZOHO_MAIL_API}/accounts/{account_id}/messages/view"
@@ -51,16 +53,19 @@ def fetch_emails(token, account_id):
 
         batch_emails = data.get("data", [])
         if not batch_emails:
-            print(f"  No more emails found (got {len(emails)} total).")
+            print(f"  No more emails found. Total: {len(emails)}")
             break
 
         emails.extend(batch_emails)
         print(f"  Fetched {len(emails)} emails so far...")
 
-        if len(batch_emails) < limit:
+        if len(batch_emails) < fetch_count:
             break
 
-        start += limit
+        if limit_total and len(emails) >= limit_total:
+            break
+
+        start += fetch_count
 
     return emails
 
