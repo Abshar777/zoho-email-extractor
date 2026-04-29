@@ -16,7 +16,7 @@ export default function SetupWizard() {
   const REDIRECT_URI =
     typeof window !== "undefined"
       ? `${window.location.origin}/api/auth/callback`
-      : `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/auth/callback`;
+      : `${process.env.NEXT_PUBLIC_APP_URL ?? "https://zoho-email-extractor.deltaacademy.ae"}/api/auth/callback`;
 
   async function handleSave() {
     if (!clientId.trim() || !clientSecret.trim()) {
@@ -50,13 +50,12 @@ export default function SetupWizard() {
           {([1, 2, 3] as Step[]).map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
-                  step === s
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step === s
                     ? "bg-blue-600 text-white"
                     : step > s
-                    ? "bg-green-500 text-white"
-                    : "bg-white/10 text-white/40"
-                }`}
+                      ? "bg-green-500 text-white"
+                      : "bg-white/10 text-white/40"
+                  }`}
               >
                 {step > s ? "✓" : s}
               </div>
@@ -119,7 +118,7 @@ export default function SetupWizard() {
                         <p>Fill in the form with these values:</p>
                         <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
                           <FieldRow label="Client Name" value="My Mail Extractor (or anything)" />
-                          <FieldRow label="Homepage URL" value={typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000")} />
+                          <FieldRow label="Homepage URL" value={typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL ?? "https://zoho-email-extractor.deltaacademy.ae")} />
                           <FieldRow label="Authorized Redirect URI" value={REDIRECT_URI} copyable />
                         </div>
                       </div>
