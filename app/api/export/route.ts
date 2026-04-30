@@ -56,17 +56,20 @@ export async function POST() {
       // Phase 3: Build Excel
       updateJob(job.id, { phase: "building-excel" });
 
+      const CELL_LIMIT = 32767;
+      const cap = (s: string) => s.slice(0, CELL_LIMIT);
+
       const rows = emails.map((email: ZohoEmail, i: number) => {
         const ts = parseInt(email.sentDateInGMT || email.receivedTime || "0");
         const date = ts ? new Date(ts).toISOString().replace("T", " ").slice(0, 19) + " UTC" : "";
         return {
           "#": i + 1,
           Date: date,
-          From: email.fromAddress ?? "",
-          To: email.toAddress ?? "",
-          CC: email.ccAddress === "Not Provided" ? "" : (email.ccAddress ?? ""),
-          Subject: email.subject ?? "",
-          Body: bodies[i] ?? "",
+          From: cap(email.fromAddress ?? ""),
+          To: cap(email.toAddress ?? ""),
+          CC: cap(email.ccAddress === "Not Provided" ? "" : (email.ccAddress ?? "")),
+          Subject: cap(email.subject ?? ""),
+          Body: cap(bodies[i] ?? ""),
           Attachments: email.hasAttachment === "1" ? (email.attachmentCount ?? 1) : 0,
         };
       });

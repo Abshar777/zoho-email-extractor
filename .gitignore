@@ -2,3 +2,5 @@ config.py
 __pycache__
 .env
 test.md
+node_modules
+.next
